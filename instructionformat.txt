@@ -1,0 +1,26 @@
+R-type:
+func(3) | shamt(4) | rd(4) | rt(4) | rs(4) | opcode(4 = 0000)
+
+FUNC Mapping (your spec) :
+Operation	Func
+OR	000
+NOR	001
+AND	010
+ADD	011
+SUB	100
+SLL	101
+SRL	110
+SLT	111
+-------------------------------
+I-type :
+imm(11) | rt(4) | rs(4) | opcode(4)
+Instruction	Opcode
+ADDi	0001
+LW	0010
+SW	0011
+BEQ	0100
+BNE	0101
+
+-----------------------------------
+J-type:
+address(19) | opcode(4 = 0110)
