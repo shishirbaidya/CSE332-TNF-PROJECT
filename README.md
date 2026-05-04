@@ -8,7 +8,7 @@ Control unit signal generation
 Simulation and verification using digital logic tools (e.g., Logisim)
 🏗️ Architecture Design
 🔢 Instruction Format
-![Datapath](Datapath.png)
+![Datapath](DataPath.png)
 The 23-bit instruction is divided into multiple formats:
 
 R-Type (Register)
