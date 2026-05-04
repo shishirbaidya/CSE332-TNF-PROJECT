@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #define RESET   "\033[0m"
 #define BOLD    "\033[1m"
 #define DIM     "\033[2m"
-
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
@@ -14,9 +12,7 @@
 #define MAGENTA "\033[35m"
 #define CYAN    "\033[36m"
 
-
 typedef enum { R_TYPE, I_TYPE, J_TYPE, INVALID } InstType;
-
 
 int regToInt(char *reg) {
     if (reg[0] != 'R') return -1;
@@ -24,6 +20,7 @@ int regToInt(char *reg) {
 }
 
 int funcCode(char *op) {
+    if (!strcmp(op, "NOP")) return 0; // Added NOP logic
     if (!strcmp(op, "OR"))  return 0;
     if (!strcmp(op, "NOR")) return 1;
     if (!strcmp(op, "AND")) return 2;
@@ -35,7 +32,6 @@ int funcCode(char *op) {
     return -1;
 }
 
-
 int opcode(char *op) {
     if (!strcmp(op, "ADDI")) return 1;
     if (!strcmp(op, "LW"))   return 2;
@@ -45,7 +41,6 @@ int opcode(char *op) {
     if (!strcmp(op, "J"))    return 6;
     return 0;
 }
-
 
 InstType getType(char *op) {
     if (funcCode(op) != -1) return R_TYPE;
@@ -59,8 +54,6 @@ InstType getType(char *op) {
 
     return INVALID;
 }
-
-
 
 unsigned int buildR(int func, int shamt, int rd, int rt, int rs) {
     return ((func & 0x7) << 20) |
@@ -83,8 +76,6 @@ unsigned int buildJ(int addr) {
     return ((addr & 0x7FFFF) << 4) | 6;
 }
 
-
-
 int main() {
     FILE *in  = fopen("assembly.txt", "r");
     FILE *out = fopen("output.hex", "w");
@@ -99,9 +90,8 @@ int main() {
 
     fprintf(out, "v2.0 raw\n");
 
-    
     printf(BOLD CYAN "\n╔══════════════════════════════════════╗\n");
-    printf("║        23-bit ISA Assembler         ║\n");
+    printf("║        23-bit ISA Assembler          ║\n");
     printf("╚══════════════════════════════════════╝\n\n" RESET);
 
     printf(DIM "Format:\n");
@@ -109,36 +99,45 @@ int main() {
     printf("I: imm|rt|rs|opcode\n");
     printf("J: addr|0110\n\n" RESET);
 
-   
     while (fgets(line, sizeof(line), in)) {
-
-        char op[10], a[10], b[10], c[10];
+        // Initializing strings so NOP (which lacks a, b, c arguments) doesn't break sscanf
+        char op[10] = "", a[10] = "", b[10] = "", c[10] = "";
         unsigned int machine = 0;
 
         sscanf(line, "%s %s %s %s", op, a, b, c);
+        
+        // Skip entirely blank lines
+        if (op[0] == '\0') continue; 
+
         InstType type = getType(op);
 
         printf(DIM "Addr:%02d " RESET, addr);
 
         if (type == R_TYPE) {
-            int rd = regToInt(a);
-            int rt = regToInt(b);
-            int rs = regToInt(c);
-            int shamt = 0;
+            int rd = 0, rt = 0, rs = 0, shamt = 0;
+            int func = funcCode(op);
 
-            if (!strcmp(op, "SLL") || !strcmp(op, "SRL")) {
-                shamt = atoi(c);
-                rs = 0;
+            if (!strcmp(op, "NOP")) {
+                // For NOP, explicitly set everything to 0
+                rd = 0; rt = 0; rs = 0; shamt = 0;
+            } else {
+                rd = regToInt(a);
+                rt = regToInt(b);
+                rs = regToInt(c);
+
+                if (!strcmp(op, "SLL") || !strcmp(op, "SRL")) {
+                    shamt = atoi(c);
+                    rs = regToInt(b); // Value of second param is now assigned to rs
+                    rt = 0;           // rt is cleared to 0
+                }
             }
 
-            int func = funcCode(op);
             machine = buildR(func, shamt, rd, rt, rs);
 
             printf(GREEN "[R] " RESET BOLD "%-4s " RESET, op);
             printf(DIM "| func:%d sh:%d rd:%d rt:%d rs:%d " RESET,
                    func, shamt, rd, rt, rs);
         }
-
         else if (type == I_TYPE) {
             int rt  = regToInt(a);
             int rs  = regToInt(b);
@@ -151,7 +150,6 @@ int main() {
             printf(DIM "| imm:%d rt:%d rs:%d opc:%d " RESET,
                    imm, rt, rs, opc);
         }
-
         else if (type == J_TYPE) {
             int addr_val = atoi(a);
 
@@ -160,20 +158,17 @@ int main() {
             printf(MAGENTA "[J] " RESET BOLD "%-4s " RESET, op);
             printf(DIM "| addr:%d opc:6 " RESET, addr_val);
         }
-
         else {
             printf(RED BOLD "ERROR: " RESET RED "Invalid instruction -> %s\n" RESET, op);
             continue;
         }
 
-       
         printf("| HEX: " BOLD CYAN "%06X\n" RESET, machine);
 
         fprintf(out, "%06X\n", machine);
         addr++;
     }
 
-  
     printf(BOLD CYAN "\n════════════════ DONE ════════════════\n" RESET);
 
     fclose(in);
